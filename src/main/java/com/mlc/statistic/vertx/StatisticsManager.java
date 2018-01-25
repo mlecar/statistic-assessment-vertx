@@ -9,16 +9,19 @@ import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 
 @Component
 public class StatisticsManager {
     private static Logger log = LoggerFactory.getLogger(StatisticsManager.class);
+
+    @Autowired
+    private Gson gson;
 
     private ConcurrentSkipListMap<Long, Double> map;
 
@@ -31,8 +34,9 @@ public class StatisticsManager {
 
     @KafkaListener(topics = "transactions")
     public void add(String payload) {
-        JsonElement e = new Gson().toJsonTree(payload);
-        map.put(e.getAsJsonObject().get("timestamp").getAsLong(), e.getAsJsonObject().get("amount").getAsDouble());
+        log.info("Received " + payload);
+        Statistic stat = gson.fromJson(payload, Statistic.class);
+        map.put(stat.getTimestamp(), stat.getAmount());
     }
 
     public DoubleSummaryStatisticsWrapper getLastMinute() {

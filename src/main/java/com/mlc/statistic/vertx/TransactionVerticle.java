@@ -1,12 +1,23 @@
 package com.mlc.statistic.vertx;
 
-import io.vertx.core.AbstractVerticle;
-import io.vertx.core.Future;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
+import io.vertx.core.AbstractVerticle;
+import io.vertx.ext.web.Router;
+
+@Component
 public class TransactionVerticle extends AbstractVerticle {
 
+    @Autowired
+    private Router router;
+
+    @Autowired
+    private TransactionHandler transactionHandler;
+
     @Override
-    public void start(Future<Void> startFuture) throws Exception {
+    public void start() throws Exception {
+        router.post("/transactions").consumes("application/json").handler(transactionHandler::add);
 
         /*
          * HttpServer server = vertx.createHttpServer();

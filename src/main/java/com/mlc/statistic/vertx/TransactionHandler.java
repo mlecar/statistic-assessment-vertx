@@ -3,25 +3,30 @@ package com.mlc.statistic.vertx;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 
+import org.apache.kafka.clients.producer.ProducerRecord;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
 import org.springframework.stereotype.Component;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
 
 import com.google.gson.Gson;
 
 import io.netty.handler.codec.http.HttpResponseStatus;
-import io.vertx.core.Handler;
 import io.vertx.core.http.HttpServerResponse;
 import io.vertx.ext.web.RoutingContext;
 
 @Component
-public class TransactionHandler implements Handler<RoutingContext> {
+public class TransactionHandler {
 
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    @Override
-    public void handle(RoutingContext rc) {
+    @Autowired
+    private Gson gson;
+
+    public void add(RoutingContext rc) {
         Statistic stat = new Gson().fromJson(rc.getBodyAsString(), Statistic.class);
 
         HttpServerResponse response = rc.response();
@@ -37,7 +42,26 @@ public class TransactionHandler implements Handler<RoutingContext> {
          * Map<String, Object> message = new HashMap<>(); message.put("amount",
          * stat.getAmount()); message.put("timestamp", stat.getTimestamp());
          */
-        kafkaTemplate.send("transactions", new Gson().toJson(stat));
+
+        // Async
+        final ProducerRecord<String, String> producerRecord = new ProducerRecord<String, String>("transactions", gson.toJson(stat));
+        ListenableFuture<SendResult<String, String>> future = kafkaTemplate.send(producerRecord);
+        future.addCallback(new ListenableFutureCallback<SendResult<String, String>>() {
+
+            @Override
+            public void onSuccess(SendResult<String, String> result) {
+                System.out.println("success");
+            }
+
+            @Override
+            public void onFailure(Throwable ex) {
+                System.out.println("success");
+            }
+
+        });
+
+        // Sync
+        // kafkaTemplate.send("transactions", stat);
 
         response.setStatusCode(HttpResponseStatus.CREATED.code());
         response.end();
